@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sipgram"
+version = "0.5.0"
+description = "Self-hosted SIP <-> Telegram voice gateway (softphone inside Telegram for your own PBX)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-PolyForm-Noncommercial-1.0.0"
+license-files = ["LICENSE", "NOTICE.md"]
+authors = [{name = "vasmarfas"}]
+dependencies = [
+    "aiohttp>=3.9",
+    "ntgcalls>=2.2.5,<3",
+    "telethon>=1.40",
+    "numpy>=1.26",
+    "PyYAML>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vasmarfas/sipgram"
+Issues = "https://github.com/vasmarfas/sipgram/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6"]
+
+[project.scripts]
+sipgram = "sipgram.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["sipgram*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    "B008",     # calls in argument defaults, used for dataclass factories
+    "SIM105",   # contextlib.suppress reads worse than try/except/pass in the hot paths here
+    "SIM108",   # ternaries hurt readability in the digest and codec branches
+]
+
+[tool.ruff.lint.per-file-ignores]
+"sipgram/messages.py" = ["E501"]   # translation table, the strings are what they are
+"tests/*" = ["E501"]               # SIP and SDP fixtures are pasted verbatim

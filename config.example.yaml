@@ -1,0 +1,119 @@
+# SIPgram configuration (v0.5). Copy to config.yaml and edit.
+# Any value may reference an environment variable: "${SIP_PASSWORD}" or "${VAR:-default}".
+#
+# One gateway Telegram account serves everybody: it calls users when their extensions ring and
+# holds several conversations at once. Each SIP account (extension) belongs to one or more users,
+# or is shared (then the dialed number picks the Telegram user).
+
+telegram:
+  api_id: 12345                 # https://my.telegram.org -> API development tools
+  api_hash: "0123456789abcdef0123456789abcdef"
+  session: gateway              # sessions/gateway.session (created by: sipgram login)
+  sessions_dir: sessions        # relative to this file
+  bot_token: ""                 # optional @BotFather token: buttons (keypad, hold, transfer) and a live call card
+  max_calls: 10                 # simultaneous Telegram calls this account holds
+  language: ru                  # ru | en, the starting language; each user can switch with /lang
+  # A second, third… Telegram account. Useful when one account's call limit is not enough, or when
+  # departments should call from different identities. Every session needs its own `sipgram login <name>`.
+  # gateways:
+  #   - {name: sales, session: sales, max_calls: 5}
+  #   - {name: support, session: support}
+
+users:                          # Telegram users allowed to use the gateway
+  - id: 123456789               # numeric id (ask @userinfobot), "@username" or "+79991234567"
+    name: Иван
+  - id: "@petya"
+    name: Петя
+    language: en                # this user's starting language; /lang changes it and it is remembered
+    # gateway: sales            # which Telegram account calls this user (default: the first one)
+    # can_call: false           # may receive calls but not dial out
+
+sip:                            # defaults for every account below (each key may be overridden per account)
+  server: pbx.example.com       # FreePBX host
+  port: 5060                    # chan_pjsip port (legacy chan_sip usually listens elsewhere)
+  transport: udp                # udp | tcp | tls
+  codecs: [opus, pcma, pcmu]    # opus gives 48 kHz wideband audio end to end; also l16/16000, l16/8000
+  expires: 300
+  local_port: 5070              # first account; the next ones get 5071, 5072, ... unless set explicitly
+  rtp_port_min: 40000           # RTCP uses the odd port right after each RTP one
+  rtp_port_max: 40200
+  # local_ip: ""                # bind address, auto-detected
+  # public_ip: ""               # address to advertise when the PBX cannot reach the bind address
+  # dtmf: rfc2833               # rfc2833: out of band, like a normal phone (the default)
+                                # inband: the tone is mixed into the audio, the other party hears it
+                                # info: SIP INFO; none: send nothing
+  accounts:
+    - username: "491"           # extension
+      password: "${SIP_PASSWORD_491}"
+      user: 123456789           # owner: gets the incoming calls, may dial out through it
+      display_name: "Иван Telegram"
+      ring_timeout: 40          # seconds to ring in Telegram before the PBX gets 480 (voicemail / follow-me)
+      default_destination: ""   # dialed when the owner CALLS the gateway account without sending a number
+    - username: "492"
+      password: "${SIP_PASSWORD_492}"
+      users: ["@petya", 123456789]   # several owners: the first one rings, or all of them with ring_all
+      ring_all: false
+    # A shared "trunk" account: the PBX dials tg#username, +79991234567 or a numeric id through it and any
+    # listed user may dial out via it when they have no extension of their own (see the PBX side section of the README).
+    # - username: "tg-trunk"
+    #   password: "${SIP_PASSWORD_TRUNK}"
+    #   shared: true
+
+calls:
+  outgoing_mode: callback       # callback: you send a number, the gateway calls you back, then dials
+                                # direct: the gateway dials at once and calls you in parallel
+  outgoing_ring_timeout: 60     # how long the callback rings you
+  pending_number_ttl: 120       # a number you sent is used if you call the gateway within this many seconds
+  dial_rules:                   # regex rewrites applied to numbers you send, in order
+    - ["[^0-9+*#]", ""]         # drop spaces, dashes, brackets
+    - ["^\\+", ""]               # "+7..." -> "7..."
+    - ["^8(\\d{10})$", "7\\1"]   # "8 903 ..." -> "7903..."
+  call_waiting: true            # a second PBX call while you talk: rings, /switch accepts it with the first on hold
+  reconnect_timeout: 60         # Telegram dropped mid-call: hold the PBX side and call you back for this long (0 = off)
+  notify_incoming: true         # text with the caller id before the Telegram call rings
+  record: "off"                 # off | ask | all; the recording goes to the chat as a voice message and is never stored
+                                # ask: /rec turns it on for the current call; all: every call is recorded
+  record_max_minutes: 60        # stop recording after this long (bounds memory use)
+  conference_extension: ""      # ConfBridge room on the PBX, e.g. "8000", enables /conf
+  group_chat: ""                # Telegram group whose voice chat /group uses, e.g. "@myteam" or -1001234567890
+                                # the gateway account must be a member with the right to start a voice chat
+  group_title: SIPgram          # title of the voice chat when the gateway starts one
+  jitter_ms: 40                 # Telegram -> RTP smoothing buffer
+  ringback: ru                  # tone while the PBX dials: ru | us | none
+  history_size: 50              # /history entries kept per user
+
+schedule:                       # incoming call screening; empty (the default) means everything rings
+  work_hours: []                # ["mon-fri 09:00-18:00"], outside these windows calls do not ring
+  quiet_hours: []               # ["all 22:00-08:00"], inside these windows calls do not ring; may cross midnight
+                                # days: mon..sun, ranges (mon-fri, fri-mon), lists (mon,wed), aliases
+                                # weekdays / weekend / all; times are the local time of the container (set TZ)
+  blacklist: []                 # ["7495*", "~^7999\\d{7}$", "anonymous"]: wildcards, ~regex, hidden number
+  whitelist: []                 # if not empty, only these numbers get through, at any hour
+  action: unavailable           # what a filtered caller hears: unavailable (480, the PBX keeps going by
+                                # follow-me / voicemail), busy (486) or reject (603)
+  forward: ""                   # instead of `action`: send the call to this number (302), e.g. "*97" or a mobile
+  notify: true                  # tell the user in the chat that a call was filtered
+  # A user may have their own windows and lists; keys that are not listed are taken from this section:
+  # users:
+  #   - {id: 123456789, schedule: {quiet_hours: ["all 20:00-09:00"]}}
+
+notifications:                  # the gateway reports its own problems to one chat
+  admin: ""                     # Telegram id / @username; empty disables the alerts
+  registration: true            # a SIP account lost or regained its registration
+  telegram: true                # Telegram session problems and flood waits
+  startup: true                 # gateway started and stopped
+  calls: false                  # a line per failed call
+  down_after: 60                # how long a problem must last before it is reported, seconds
+
+api:                            # HTTP API for CRM systems and scripts, see the HTTP API section of the README
+  enabled: false
+  bind: 127.0.0.1               # 0.0.0.0 only behind a firewall or a reverse proxy
+  port: 8080
+  token: "${SIPGRAM_API_TOKEN}" # at least 16 characters
+  allow: []                     # optional list of addresses/networks, e.g. ["10.0.0.0/8"]
+  rate_limit: 120               # requests per minute per client address
+
+logging:
+  level: INFO                   # DEBUG shows SIP/RTP/Telegram details (or run: sipgram -v run)
+  file: ""                      # optional log file path
+  sip_trace: false              # log every SIP message (or: sipgram --sip-trace run)

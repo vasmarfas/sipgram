@@ -1,0 +1,22 @@
+services:
+  asterisk:
+    image: andrius/asterisk:latest
+    volumes:
+      - ./asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
+      - ./asterisk/logger.conf:/etc/asterisk/logger.conf:ro
+      - ./asterisk/manager.conf:/etc/asterisk/manager.conf:ro
+  tester:
+    build:
+      context: .
+      dockerfile: Dockerfile.tester
+    working_dir: /app
+    volumes:
+      - ../..:/app
+    environment:
+      ASTERISK_HOST: asterisk
+      PYTHONPATH: /app
+    command: python -m pytest -x -q -p no:cacheprovider tests/integration
+    depends_on:
+      - asterisk

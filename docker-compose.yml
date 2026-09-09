@@ -1,0 +1,21 @@
+services:
+  sipgram:
+    build: .
+    # or take the prebuilt image instead of building:
+    # image: ghcr.io/vasmarfas/sipgram:latest
+    image: sipgram:latest
+    container_name: sipgram
+    restart: unless-stopped
+    # host networking keeps SIP/RTP addressing simple (no NAT between the gateway and the PBX)
+    network_mode: host
+    volumes:
+      - ./config:/app/config
+      - ./sessions:/app/sessions
+    environment:
+      # the schedule section works in local time; without this the container lives in UTC
+      TZ: ${TZ:-Europe/Moscow}
+    env_file:
+      - .env
+    # first-time login: docker compose run --rm sipgram login
+    stdin_open: true
+    tty: true
