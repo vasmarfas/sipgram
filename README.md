@@ -1,7 +1,6 @@
 # SIPgram
 
 [![ci](https://github.com/vasmarfas/sipgram/actions/workflows/ci.yml/badge.svg)](https://github.com/vasmarfas/sipgram/actions/workflows/ci.yml)
-[![docker](https://github.com/vasmarfas/sipgram/actions/workflows/docker.yml/badge.svg)](https://github.com/vasmarfas/sipgram/actions/workflows/docker.yml)
 [![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
 
 **[Русская версия](README.ru.md)**
