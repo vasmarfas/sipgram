@@ -63,6 +63,7 @@ One gateway account serves every user at the same time.
 ```bash
 git clone https://github.com/vasmarfas/sipgram.git && cd sipgram
 mkdir -p config sessions
+sudo chown -R 1000:1000 config sessions
 cp config.example.yaml config/config.yaml
 cp .env.example .env
 docker compose build
@@ -76,6 +77,9 @@ Fill in `api_id`, `api_hash`, `users`, `sip.server` and `sip.accounts` in `confi
 passwords in `.env`, before the `login` step. `login` asks for the phone number of the gateway account, the code
 from the SMS and the 2FA password, and has to be done once. `whoami` shows the session, the resolved users and the
 bot; `check` registers every extension once.
+
+The container runs as uid 1000, so the two bind-mounted directories have to belong to it, hence the `chown`.
+Without it the first `login` fails with `Permission denied` when it tries to write the session file.
 
 A prebuilt image is published on every push to the default branch, for `linux/amd64` and `linux/arm64`:
 

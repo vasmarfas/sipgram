@@ -14,6 +14,8 @@ services:
     environment:
       # the schedule section works in local time; without this the container lives in UTC
       TZ: ${TZ:-Europe/Moscow}
+      # sessions_dir in the config is relative to config.yaml, which lives in the other volume
+      SIPGRAM_SESSIONS_DIR: /app/sessions
     env_file:
       - .env
     # first-time login: docker compose run --rm sipgram login

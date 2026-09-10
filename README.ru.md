@@ -63,6 +63,7 @@
 ```bash
 git clone https://github.com/vasmarfas/sipgram.git && cd sipgram
 mkdir -p config sessions
+sudo chown -R 1000:1000 config sessions
 cp config.example.yaml config/config.yaml
 cp .env.example .env
 docker compose build
@@ -75,6 +76,9 @@ docker compose up -d && docker compose logs -f
 До шага `login` заполните в `config/config.yaml` поля `api_id`, `api_hash`, `users`, `sip.server` и `sip.accounts`,
 а в `.env` пароли внутренних номеров. `login` спрашивает телефон аккаунта-шлюза, код из SMS и пароль 2FA, делается
 один раз. `whoami` показывает сессию, разрешённых пользователей и бота, `check` регистрирует каждый номер.
+
+Процесс в контейнере работает под uid 1000, поэтому оба примонтированных каталога должны принадлежать ему,
+отсюда `chown`. Без него первый `login` падает с `Permission denied` при записи файла сессии.
 
 Готовый образ собирается при каждом пуше в основную ветку, для `linux/amd64` и `linux/arm64`:
 

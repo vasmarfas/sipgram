@@ -9,7 +9,7 @@ telegram:
   api_id: 12345                 # https://my.telegram.org -> API development tools
   api_hash: "0123456789abcdef0123456789abcdef"
   session: gateway              # sessions/gateway.session (created by: sipgram login)
-  sessions_dir: sessions        # relative to this file
+  sessions_dir: "${SIPGRAM_SESSIONS_DIR:-sessions}"   # relative to this file; docker-compose points it at /app/sessions
   bot_token: ""                 # optional @BotFather token: buttons (keypad, hold, transfer) and a live call card
   max_calls: 10                 # simultaneous Telegram calls this account holds
   language: ru                  # ru | en, the starting language; each user can switch with /lang
@@ -109,7 +109,7 @@ api:                            # HTTP API for CRM systems and scripts, see the 
   enabled: false
   bind: 127.0.0.1               # 0.0.0.0 only behind a firewall or a reverse proxy
   port: 8080
-  token: "${SIPGRAM_API_TOKEN}" # at least 16 characters
+  token: "${SIPGRAM_API_TOKEN:-}"  # at least 16 characters; only needed when enabled is true
   allow: []                     # optional list of addresses/networks, e.g. ["10.0.0.0/8"]
   rate_limit: 120               # requests per minute per client address
 
